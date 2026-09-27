@@ -1,0 +1,17 @@
+{
+  "id": "overcast_soil_puresky",
+  "source": "https://polyhaven.com/a/overcast_soil_puresky",
+  "license": "CC0-1.0",
+  "license_url": "https://polyhaven.com/license",
+  "authors": {
+    "Jarod Guest": "Sky Edits",
+    "Sergej Majboroda": "Original"
+  },
+  "checked": "2026-09-27",
+  "usage": "Lighting candidate, not geographical background of Moscow or Saint Petersburg",
+  "file": "overcast_soil_puresky_2k.hdr",
+  "size": 4568000,
+  "url": "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/overcast_soil_puresky_2k.hdr",
+  "md5": "877caf0680d7269037995f6567a67103",
+  "sha256": "5414e1ac0c35e451d28595b2a2cba05e2ca301fdeb755b0a469408443093dafc"
+}

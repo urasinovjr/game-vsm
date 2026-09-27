@@ -1,0 +1,6 @@
+{
+  "name": "GameVSM.Runtime",
+  "rootNamespace": "GameVSM",
+  "references": ["Unity.InputSystem", "Unity.ugui"],
+  "autoReferenced": true
+}

@@ -1,0 +1,182 @@
+{
+  "target": "Unity URP Lit; metallic workflow",
+  "metallic_smoothness": "R=metalness G=0 B=0 A=1-roughness; linear",
+  "occlusion": "RGB=AO; URP samples G; linear",
+  "normal": "OpenGL tangent-space; import as Normal map; no green flip",
+  "materials": [
+    {
+      "id": "asphalt_02",
+      "source": "https://polyhaven.com/a/asphalt_02",
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "changes": "BaseColor/normal unchanged; ORM split and roughness inverted for URP",
+      "files": [
+        {
+          "file": "asphalt_02/BaseColor.jpg",
+          "bytes": 731707,
+          "sha256": "1aa5ce99f58a625c71d48cfc3e68b65ca85ccb00f39e045c0a928608a0ea25ed"
+        },
+        {
+          "file": "asphalt_02/NormalGL.jpg",
+          "bytes": 1240122,
+          "sha256": "42a1c381b53204e83a982db2864479a30bc127bbdeebb1006f8ee51bff099df3"
+        },
+        {
+          "file": "asphalt_02/MetallicSmoothness.png",
+          "bytes": 1609485,
+          "sha256": "db91a08b80b086212ece1004d449a6034ba722e2423fe3fef5455dcb62310d42"
+        },
+        {
+          "file": "asphalt_02/Occlusion.png",
+          "bytes": 960553,
+          "sha256": "85bd12a1f31296a2d6fdccb2b4ef68625f1b4381681a44b20db5777ab190594e"
+        }
+      ]
+    },
+    {
+      "id": "gravel_floor_02",
+      "source": "https://polyhaven.com/a/gravel_floor_02",
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "changes": "BaseColor/normal unchanged; ORM split and roughness inverted for URP",
+      "files": [
+        {
+          "file": "gravel_floor_02/BaseColor.jpg",
+          "bytes": 1240441,
+          "sha256": "ac9874264762a9e8d337e684259d51dac41a012933f0d8013033fee7076383f3"
+        },
+        {
+          "file": "gravel_floor_02/NormalGL.jpg",
+          "bytes": 1545680,
+          "sha256": "7db09804733f912bd120a1a3179bb867a01819ab9539a1c80eadfaff7e22509e"
+        },
+        {
+          "file": "gravel_floor_02/MetallicSmoothness.png",
+          "bytes": 1532608,
+          "sha256": "65f871dd591a32c5940eadc00279351e97b754eacbcc942636a1aff808779169"
+        },
+        {
+          "file": "gravel_floor_02/Occlusion.png",
+          "bytes": 1129876,
+          "sha256": "bd8f03425002fe0b4f37cd4a06dae70b523bcc44c845e8129953d68b97de1bd4"
+        }
+      ]
+    },
+    {
+      "id": "concrete_floor_02",
+      "source": "https://polyhaven.com/a/concrete_floor_02",
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "changes": "BaseColor/normal unchanged; ORM split and roughness inverted for URP",
+      "files": [
+        {
+          "file": "concrete_floor_02/BaseColor.jpg",
+          "bytes": 776097,
+          "sha256": "6db84a6d87dc50508b9d134d6fbd2b7e876b8081a5f43a118a249ca18de73af5"
+        },
+        {
+          "file": "concrete_floor_02/NormalGL.jpg",
+          "bytes": 192757,
+          "sha256": "fcda391b57a816d646ae15544688be53790478da5cd48dbe514b3c6901415e61"
+        },
+        {
+          "file": "concrete_floor_02/MetallicSmoothness.png",
+          "bytes": 1037240,
+          "sha256": "4356a7ccf68ee4768b6feebbeba0847313898dbd1d5748869f204c03a99445f7"
+        },
+        {
+          "file": "concrete_floor_02/Occlusion.png",
+          "bytes": 629826,
+          "sha256": "0042eef2ae4c105fac8815f6a986f00dbbb21527656721683377ebf029d30985"
+        }
+      ]
+    },
+    {
+      "id": "white_plaster_rough_02",
+      "source": "https://polyhaven.com/a/white_plaster_rough_02",
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "changes": "BaseColor/normal unchanged; ORM split and roughness inverted for URP",
+      "files": [
+        {
+          "file": "white_plaster_rough_02/BaseColor.jpg",
+          "bytes": 734866,
+          "sha256": "1449dbca00e0c5c9588306313d910bbc8bfe201b4d8798dd4856fba822e47e09"
+        },
+        {
+          "file": "white_plaster_rough_02/NormalGL.jpg",
+          "bytes": 489123,
+          "sha256": "95cb88137a13bc33a52c5215862ab2903a686dec7579d86a42aa1d765287349a"
+        },
+        {
+          "file": "white_plaster_rough_02/MetallicSmoothness.png",
+          "bytes": 1667301,
+          "sha256": "0322d265571ff6ead762d1f3f8c0fbcb7610b82ae9fff8099003de1c0dc5ffa1"
+        },
+        {
+          "file": "white_plaster_rough_02/Occlusion.png",
+          "bytes": 938278,
+          "sha256": "94b13bd697221dedf54302c7afd0ce46c8bdce4cdbe1f7a045e2fe67e0e899f7"
+        }
+      ]
+    },
+    {
+      "id": "blue_metal_plate",
+      "source": "https://polyhaven.com/a/blue_metal_plate",
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "changes": "BaseColor/normal unchanged; ORM split and roughness inverted for URP",
+      "files": [
+        {
+          "file": "blue_metal_plate/BaseColor.jpg",
+          "bytes": 395923,
+          "sha256": "a0162bffce47d4a35613a12af22571b28c18412dc5805cbb69eac343554ef750"
+        },
+        {
+          "file": "blue_metal_plate/NormalGL.jpg",
+          "bytes": 238025,
+          "sha256": "970f0273c9e2e3b4fc8338bfd58a28c413b70ac4d1734d9dc8a136724bde56e6"
+        },
+        {
+          "file": "blue_metal_plate/MetallicSmoothness.png",
+          "bytes": 849927,
+          "sha256": "ff9293b49307aaab02fd0b03a70395df80c8b443abab6234bb0c3e5ed0bf2594"
+        },
+        {
+          "file": "blue_metal_plate/Occlusion.png",
+          "bytes": 399248,
+          "sha256": "14dfa683e797a942a573cf9eb7dcb67dfc60595157f3e3246eaf983a892f51e4"
+        }
+      ]
+    },
+    {
+      "id": "metal_plate",
+      "source": "https://polyhaven.com/a/metal_plate",
+      "license": "CC0-1.0",
+      "license_url": "https://polyhaven.com/license",
+      "changes": "BaseColor/normal unchanged; ORM split and roughness inverted for URP",
+      "files": [
+        {
+          "file": "metal_plate/BaseColor.jpg",
+          "bytes": 692234,
+          "sha256": "c6b6739eac2c75ccc898e753d7833df24eafbdb9aa92fb6eabfb92abd1a680a5"
+        },
+        {
+          "file": "metal_plate/NormalGL.jpg",
+          "bytes": 770307,
+          "sha256": "994f851a84d52b51e97906021a1b7070ee6eac9a789fef041132268de47d8e6b"
+        },
+        {
+          "file": "metal_plate/MetallicSmoothness.png",
+          "bytes": 1795750,
+          "sha256": "a546acf887a337a1e891db2a3d7f95816d49d5ab520ecf8204b7578bfc9d0409"
+        },
+        {
+          "file": "metal_plate/Occlusion.png",
+          "bytes": 895874,
+          "sha256": "b28c149b16e3c7bed53da27f17dd00d276cd4746aaec1d6ee3b313052e8a102c"
+        }
+      ]
+    }
+  ]
+}

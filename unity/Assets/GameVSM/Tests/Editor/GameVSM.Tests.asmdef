@@ -1,0 +1,6 @@
+{
+  "name": "GameVSM.Tests",
+  "references": ["GameVSM.Runtime"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}
