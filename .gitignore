@@ -21,6 +21,8 @@ unity/[Oo]bj/
 unity/[Ll]ogs/
 unity/[Uu]ser[Ss]ettings/
 unity/[Bb]uilds/
+unity/[Bb]uild/
+unity/Assets/InitTestScene*.unity*
 unity/*.csproj
 unity/*.sln
 unity/*.slnx
