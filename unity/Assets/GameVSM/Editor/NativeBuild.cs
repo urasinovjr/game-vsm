@@ -11,6 +11,19 @@ namespace GameVSM.Editor
     {
         public static void Mac() => Build(BuildTarget.StandaloneOSX, "Builds/macOS/Conductor.app");
         public static void Android() => Build(BuildTarget.Android, "Builds/Android/Conductor.apk");
+        public static void AndroidLibrary()
+        {
+            bool previous = EditorUserBuildSettings.exportAsGoogleAndroidProject;
+            try
+            {
+                EditorUserBuildSettings.exportAsGoogleAndroidProject = true;
+                Build(BuildTarget.Android, "Builds/AndroidExport", development: false);
+            }
+            finally
+            {
+                EditorUserBuildSettings.exportAsGoogleAndroidProject = previous;
+            }
+        }
 
         public static void VerifyAndroidSupport()
         {
@@ -19,7 +32,7 @@ namespace GameVSM.Editor
             UnityEngine.Debug.Log("GAMEVSM_ANDROID_SUPPORT_READY " + UnityEngine.Application.unityVersion);
         }
 
-        static void Build(BuildTarget target, string output)
+        static void Build(BuildTarget target, string output, bool development = true)
         {
             const string scene = "Assets/GameVSM/Scenes/Metallostroy.unity";
             if (!File.Exists(scene)) throw new InvalidOperationException("Generate and validate the depot scene first.");
@@ -30,7 +43,7 @@ namespace GameVSM.Editor
             Directory.CreateDirectory(Path.GetDirectoryName(output));
             BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions {
                 scenes = new[] { scene }, locationPathName = output, target = target,
-                options = BuildOptions.Development
+                options = development ? BuildOptions.Development : BuildOptions.None
             });
             if (report.summary.result != BuildResult.Succeeded)
                 throw new InvalidOperationException($"Native build failed: {report.summary.result}, {report.summary.totalErrors} errors");

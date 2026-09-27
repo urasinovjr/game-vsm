@@ -1,17 +1,23 @@
 import 'package:flutter/foundation.dart';
 
+import 'data/game_launcher.dart';
 import 'data/session_store.dart';
 import 'data/training_api.dart';
 
 enum AppPage { onboarding, home, day, profile, achievements, leaderboard }
 
 class AppController extends ChangeNotifier {
-  AppController({required TrainingGateway gateway, required SessionStore store})
-    : _gateway = gateway,
-      _store = store;
+  AppController({
+    required TrainingGateway gateway,
+    required SessionStore store,
+    required GameLauncher gameLauncher,
+  }) : _gateway = gateway,
+       _store = store,
+       _gameLauncher = gameLauncher;
 
   final TrainingGateway _gateway;
   final SessionStore _store;
+  final GameLauncher _gameLauncher;
 
   AppPage? page;
   LocalIdentity? identity;
@@ -123,6 +129,27 @@ class AppController extends ChangeNotifier {
       error = failure.message;
     } on Exception {
       error = 'Не удалось загрузить рейтинг.';
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> startGame() async {
+    final token = identity?.token;
+    final profileId = profile?.id;
+    if (token == null || profileId == null || busy) {
+      error = 'Откройте учебный профиль перед началом смены.';
+      notifyListeners();
+      return;
+    }
+    busy = true;
+    error = null;
+    notifyListeners();
+    try {
+      await _gameLauncher.open(token: token, profileId: profileId);
+    } on Exception {
+      error = 'Не удалось открыть игровую смену. Повторите попытку.';
     } finally {
       busy = false;
       notifyListeners();

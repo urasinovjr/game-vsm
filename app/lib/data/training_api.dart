@@ -1,7 +1,6 @@
-import 'dart:async';
 import 'dart:convert';
 
-import 'package:http/http.dart' as http;
+import 'package:flutter/services.dart';
 
 class ApiFailure implements Exception {
   const ApiFailure(this.message, {this.unauthorized = false});
@@ -81,68 +80,52 @@ abstract class TrainingGateway {
   Future<List<LeaderboardEntry>> leaderboard(String token);
 }
 
-class HttpTrainingGateway implements TrainingGateway {
-  HttpTrainingGateway({required String baseUrl, http.Client? client})
-    : _baseUrl = baseUrl.replaceFirst(RegExp(r'/$'), ''),
-      _client = client ?? http.Client();
+class LocalTrainingGateway implements TrainingGateway {
+  static const _channel = MethodChannel('ru.gamevsm.conductor/training');
 
-  final String _baseUrl;
-  final http.Client _client;
-
-  Future<dynamic> _request(String path, {String? token, Object? body}) async {
-    final uri = Uri.parse('$_baseUrl/api$path');
-    final headers = <String, String>{'Accept': 'application/json'};
-    if (token != null) headers['Authorization'] = 'Bearer $token';
-    if (body != null) headers['Content-Type'] = 'application/json';
-
+  Future<dynamic> _call(String method, Map<String, String> args) async {
     try {
-      final response =
-          (body == null
-                  ? _client.get(uri, headers: headers)
-                  : _client.post(uri, headers: headers, body: jsonEncode(body)))
-              .timeout(const Duration(seconds: 20));
-      final result = await response;
-      if (result.statusCode == 401) {
-        throw const ApiFailure(
-          'Учебный профиль больше не найден.',
-          unauthorized: true,
+      final raw = await _channel.invokeMethod<String>(method, args);
+      final response = jsonDecode(raw ?? '') as Map<String, dynamic>;
+      if (response['ok'] != true) {
+        throw ApiFailure(
+          response['error'] as String? ??
+              'Не удалось открыть локальные данные.',
+          unauthorized: response['status'] == 401,
         );
       }
-      if (result.statusCode >= 400) {
-        throw ApiFailure('Сервер не принял запрос (${result.statusCode}).');
-      }
-      return jsonDecode(utf8.decode(result.bodyBytes));
-    } on ApiFailure {
-      rethrow;
-    } on TimeoutException {
-      throw const ApiFailure('Сервер не ответил. Проверьте соединение.');
-    } on http.ClientException {
-      throw const ApiFailure('Нет связи с сервером обучения.');
+      return response['body'];
+    } on PlatformException {
+      throw const ApiFailure('Не удалось открыть локальные данные игры.');
     } on FormatException {
-      throw const ApiFailure('Сервер вернул неожиданный ответ.');
+      throw const ApiFailure('Локальные данные игры повреждены.');
     }
   }
 
   @override
   Future<RegisteredProfile> register(String name) async {
-    final data = await _request('/profiles', body: {'name': name});
+    final data =
+        await _call('register', {'name': name}) as Map<String, dynamic>;
     return RegisteredProfile(
-      id: (data as Map<String, dynamic>)['id'] as String,
+      id: data['id'] as String,
       token: data['token'] as String,
     );
   }
 
   @override
   Future<TrainingProfile> profile(String token) async {
-    final data = await _request('/profile', token: token);
-    return TrainingProfile.fromJson(data as Map<String, dynamic>);
+    final data =
+        await _call('profile', {'token': token}) as Map<String, dynamic>;
+    return TrainingProfile.fromJson(data);
   }
 
   @override
   Future<List<LeaderboardEntry>> leaderboard(String token) async {
-    final data = await _request('/leaderboard', token: token);
-    return (data as List<dynamic>)
-        .map((item) => LeaderboardEntry.fromJson(item as Map<String, dynamic>))
+    final data = await _call('leaderboard', {'token': token}) as List<dynamic>;
+    return data
+        .map(
+          (entry) => LeaderboardEntry.fromJson(entry as Map<String, dynamic>),
+        )
         .toList();
   }
 }

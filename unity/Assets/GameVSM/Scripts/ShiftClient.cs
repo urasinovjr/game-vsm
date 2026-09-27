@@ -8,7 +8,7 @@ using UnityEngine.Networking;
 
 namespace GameVSM
 {
-    // The existing FastAPI service remains the sole owner of scores and deadlines.
+    // Android uses the app's local rules engine; standalone editor builds can use FastAPI.
     public sealed class ShiftClient : MonoBehaviour
     {
         public string BaseUrl = "http://127.0.0.1:8000";
@@ -25,6 +25,8 @@ namespace GameVSM
         string SavePath => Path.Combine(Application.persistentDataPath, SessionFileName);
         public bool CanResume => !string.IsNullOrEmpty((string)session?["attempt"]);
         public bool HasPending => session?["pending"] is JObject;
+        public bool LaunchedFromHost { get; private set; }
+        public bool LocalMode { get; private set; }
         public double ServerNow => Time.realtimeSinceStartupAsDouble + serverOffset;
         double serverOffset;
 
@@ -35,11 +37,37 @@ namespace GameVSM
             catch (Exception e) when (e is IOException || e is Newtonsoft.Json.JsonException)
             { Error = "Сохранённая смена не прочитана. Начните новую смену."; Debug.LogWarning("Файл сохранения повреждён: " + e); }
             if (!string.IsNullOrEmpty((string)session["baseUrl"])) BaseUrl = (string)session["baseUrl"];
+            ReadHostSession();
+        }
+
+        void ReadHostSession()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+                using var activity = player.GetStatic<AndroidJavaObject>("currentActivity");
+                using var intent = activity.Call<AndroidJavaObject>("getIntent");
+                string profileId = intent.Call<string>("getStringExtra", "gamevsm_profile_id");
+                if (string.IsNullOrEmpty(profileId)) return;
+                if ((string)session["profileId"] != profileId || (bool?)session["localMode"] != true)
+                    session = new JObject();
+                session["profileId"] = profileId;
+                session["localMode"] = true;
+                LaunchedFromHost = true;
+                LocalMode = true;
+            }
+            catch (AndroidJavaException e)
+            {
+                Debug.LogWarning("Не удалось прочитать данные приложения: " + e.Message);
+            }
+#endif
         }
 
         public void Connect(string url, bool resume)
         {
             if (Busy) return;
+            if (LocalMode) { StartCoroutine(ConnectRoutine(resume)); return; }
             if (!Uri.TryCreate(url.Trim(), UriKind.Absolute, out var uri) ||
                 (uri.Scheme != "http" && uri.Scheme != "https") || !string.IsNullOrEmpty(uri.UserInfo))
             { Error = "Адрес сервера указан неверно. Откройте «Подключение» и введите адрес вида http://192.168.1.10:8000."; Changed?.Invoke(); return; }
@@ -53,8 +81,14 @@ namespace GameVSM
         IEnumerator ConnectRoutine(bool resume)
         {
             Busy = true; Error = ""; Changed?.Invoke();
-            if (string.IsNullOrEmpty((string)session["token"]))
+            if (!LocalMode && string.IsNullOrEmpty((string)session["token"]))
             {
+                if (LaunchedFromHost)
+                {
+                    Error = "Профиль недоступен. Вернитесь в приложение и откройте смену снова.";
+                    Busy = false; Changed?.Invoke();
+                    yield break;
+                }
                 yield return Request("/profiles", new JObject { ["name"] = "Стажёр" }, result =>
                 { session["token"] = result["token"]; Save(); });
             }
@@ -86,7 +120,22 @@ namespace GameVSM
 
         public void Retry() { if (!Busy && HasPending) StartCoroutine(Submit()); }
 
-        public void LoadCareer() { if(!Busy && session?["token"] != null) StartCoroutine(Career()); }
+        public void LoadCareer() { if(!Busy && (LocalMode || session?["token"] != null)) StartCoroutine(Career()); }
+
+        public void ReturnToApp()
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            try
+            {
+                using var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+                using var activity = player.GetStatic<AndroidJavaObject>("currentActivity");
+                activity.Call("returnToApp");
+                return;
+            }
+            catch (Exception error) { Debug.LogWarning("Не удалось вернуться в приложение: " + error.Message); }
+#endif
+            Application.Unload();
+        }
         IEnumerator Career()
         {
             Busy=true;Error="";Changed?.Invoke();
@@ -134,6 +183,31 @@ namespace GameVSM
         }
         IEnumerator RequestDocument(string path, JObject payload, Action<JToken> receive)
         {
+            if (LocalMode)
+            {
+#if UNITY_ANDROID && !UNITY_EDITOR
+                try
+                {
+                    using var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+                    using var activity = player.GetStatic<AndroidJavaObject>("currentActivity");
+                    using var bridge = new AndroidJavaClass("ru.gamevsm.conductor.GameBridge");
+                    string raw = bridge.CallStatic<string>("dispatch", activity,
+                        payload == null ? "GET" : "POST", path, payload?.ToString() ?? "",
+                        (string)session["profileId"] ?? "");
+                    var envelope = JObject.Parse(raw);
+                    lastStatus = (bool?)envelope["ok"] == true ? 200 : (long?)envelope["status"] ?? 500;
+                    if (lastStatus == 200) receive(envelope["body"]);
+                    else Error = (string)envelope["error"] ?? "Не удалось выполнить действие.";
+                }
+                catch (Exception error)
+                {
+                    lastStatus = 500;
+                    Error = "Не удалось открыть локальные данные игры.";
+                    Debug.LogException(error);
+                }
+#endif
+                yield break;
+            }
             using var request = new UnityWebRequest(BaseUrl + "/api" + path, payload == null ? "GET" : "POST");
             request.downloadHandler = new DownloadHandlerBuffer();
             request.timeout = 20;
@@ -198,11 +272,33 @@ namespace GameVSM
             Save();
         }
 
+        void OnApplicationPause(bool paused)
+        {
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (!LocalMode) return;
+            try
+            {
+                using var player = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+                using var activity = player.GetStatic<AndroidJavaObject>("currentActivity");
+                using var bridge = new AndroidJavaClass("ru.gamevsm.conductor.GameBridge");
+                bridge.CallStatic(paused ? "pause" : "resume", activity);
+                if (!paused)
+                {
+                    string raw = bridge.CallStatic<string>("dispatch", activity, "CLOCK", "", "", "");
+                    serverOffset = (double)JObject.Parse(raw)["body"]["server_time"] - Time.realtimeSinceStartupAsDouble;
+                }
+            }
+            catch (Exception error) { Debug.LogWarning("Не удалось обновить игровой таймер: " + error.Message); }
+#endif
+        }
+
         void Save()
         {
             session["baseUrl"] = BaseUrl;
             string temporary = SavePath + ".tmp";
-            File.WriteAllText(temporary, session.ToString());
+            var stored = (JObject)session.DeepClone();
+            if (LaunchedFromHost) stored.Remove("token");
+            File.WriteAllText(temporary, stored.ToString());
             File.Copy(temporary, SavePath, true);
             File.Delete(temporary);
         }

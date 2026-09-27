@@ -1,0 +1,2 @@
+-keep class ru.gamevsm.conductor.GameBridge { *; }
+-keepclassmembers class ru.gamevsm.conductor.GameActivity { public void returnToApp(); }

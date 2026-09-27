@@ -28,9 +28,10 @@ namespace GameVSM
         Button careerButton;
         double nextRefresh;
         readonly List<Button> timedChoices = new();
-        readonly Color ink = new(.9f, .94f, .95f);
-        readonly Color panel = new(.055f, .09f, .12f, .95f);
-        readonly Color accent = new(.15f, .65f, .62f);
+        readonly Color ink = new(.96f, .98f, 1f);
+        readonly Color panel = new(.063f, .141f, .251f, .96f);
+        readonly Color accent = new(.031f, .478f, 1f);
+        Sprite rounded;
 
         void Start()
         {
@@ -38,7 +39,10 @@ namespace GameVSM
             experience = GetComponent<ShiftExperience>();
             font = Resources.Load<Font>("Manrope");
             var root = new GameObject("Интерфейс", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            canvas = root.GetComponent<RectTransform>();
+            rounded = RoundedSprite();
+            canvas = Area("Безопасная область", root.GetComponent<RectTransform>(),
+                Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero, Color.clear);
+            ApplySafeArea();
             root.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
             var scaler = root.GetComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
@@ -81,6 +85,12 @@ namespace GameVSM
             var resume = Button(m, "Продолжить смену", () => client.Connect(address.text, true));
             resumeButton = resume.gameObject;
             Place(resume.GetComponent<RectTransform>(), new Vector2(0, 1), new Vector2(400, -185), new Vector2(350, 48));
+            if (client.LaunchedFromHost)
+            {
+                connectionSettings.SetActive(false);
+                connectButton.SetActive(false);
+                resumeButton.SetActive(false);
+            }
             status = Label(m, StartText(),
                 18, new Vector2(30, -252), new Vector2(720, 140));
             // Feedback + target + task + reason can exceed the card on a phone; shrink instead of cutting the last line.
@@ -89,6 +99,11 @@ namespace GameVSM
                 new Vector2(30, 86), new Vector2(-30, -395), Color.clear);
             var walk = Button(m, "Вернуться в игру", () => Player.SetMenu(false));
             Place(walk.GetComponent<RectTransform>(), new Vector2(0, 0), new Vector2(30, 70), new Vector2(720, 48));
+            if (client.LaunchedFromHost)
+            {
+                var returnButton = Button(m, "В приложение", client.ReturnToApp);
+                Place(returnButton.GetComponent<RectTransform>(), new Vector2(0, 0), new Vector2(30, 15), new Vector2(720, 46));
+            }
             if (Application.isMobilePlatform)
             {
                 Pad("Движение", new Vector2(0, 0), new Vector2(.25f, .35f), false);
@@ -102,11 +117,12 @@ namespace GameVSM
             environment = GetComponent<ShiftEnvironment>();
             if (environment != null) environment.Changed += ChangeLocation;
             Player.SetMenu(true); previousMenu = true;
+            if (client.LaunchedFromHost) client.Connect(client.BaseUrl, client.CanResume);
         }
 
         string StartText() =>
             "Примите состав в депо, помогите пассажирам и проведите рейс до Москвы. Подходите к людям и предметам: " +
-            InputHints.Action("взаимодействовать") + ". Решения влияют на качество смены и доверие." +
+            InputHints.Action("взаимодействовать") + ". Решения влияют на качество смены и доверие. Прогресс сохраняется на устройстве." +
             (client.CanResume ? "\n\n«Продолжить смену» вернёт сохранённую смену с того задания, на котором вы остановились." : "");
 
         void Pad(string name, Vector2 min, Vector2 max, bool look)
@@ -119,6 +135,7 @@ namespace GameVSM
         void Update()
         {
             if (menu == null) return;
+            ApplySafeArea();
             if (previousMenu != Player.MenuOpen) { menu.SetActive(Player.MenuOpen); previousMenu = Player.MenuOpen; if(!Player.MenuOpen)careerOpen=false; }
             careerButton.interactable=client.Attempt!=null && !client.Busy;
             connectButton.GetComponent<Button>().interactable=!client.Busy;
@@ -162,7 +179,12 @@ namespace GameVSM
                 return;
             }
             JObject attempt = client.Attempt;
-            if (attempt == null) return;
+            if (attempt == null)
+            {
+                if (client.LocalMode && !client.Busy)
+                    AddChoice("Повторить открытие смены", () => client.Connect(client.BaseUrl, client.CanResume), 0);
+                return;
+            }
             // A lost server-side session leaves no attempt to continue, so starting anew must stay reachable.
             address.gameObject.SetActive(false); connectButton.SetActive(!client.CanResume); resumeButton.SetActive(false); connectionSettings.SetActive(!client.CanResume);
             if(careerOpen)
@@ -179,8 +201,9 @@ namespace GameVSM
                     foreach(var item in (JObject)client.Profile["competencies"])body.AppendLine((item.Key switch{"inspection"=>"Приёмка состава","communication"=>"Общение","safety"=>"Безопасность",_=>item.Key})+": "+item.Value);
                     if(!((JObject)client.Profile["competencies"]).HasValues)body.AppendLine("Завершите смену, чтобы получить результат.");
                     body.AppendLine($"\nРазбор: {client.Analytics?["decisions"]} решений · {client.Analytics?["errors"]} ошибок");
-                    body.AppendLine("\nРЕЙТИНГ · лучший завершённый результат");
-                    if(client.Leaderboard!=null)foreach(var rank in client.Leaderboard)body.AppendLine($"{rank["name"]} — {rank["score"]}");
+                    body.AppendLine("\nОБЩИЙ РЕЙТИНГ");
+                    if (client.LocalMode) body.AppendLine("Появится после подключения синхронизации. Личный результат сохранён на устройстве.");
+                    else if(client.Leaderboard!=null)foreach(var rank in client.Leaderboard)body.AppendLine($"{rank["name"]} — {rank["score"]}");
                 }
                 else body.AppendLine(client.Busy?"Загрузка…":client.Error);
                 ShowDebrief(body.ToString());
@@ -258,8 +281,36 @@ namespace GameVSM
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(Image)); go.transform.SetParent(parent, false);
             var rect = go.GetComponent<RectTransform>(); rect.anchorMin = min; rect.anchorMax = max; rect.offsetMin = low; rect.offsetMax = high;
-            go.GetComponent<Image>().color = color; go.GetComponent<Image>().raycastTarget = color.a > 0;
+            var image = go.GetComponent<Image>(); image.color = color; image.raycastTarget = color.a > 0;
+            if (color.a > 0 && rounded != null) { image.sprite = rounded; image.type = Image.Type.Sliced; }
             return rect;
+        }
+
+        void ApplySafeArea()
+        {
+            if (canvas == null || Screen.width == 0 || Screen.height == 0) return;
+            var safe = Screen.safeArea;
+            canvas.anchorMin = new Vector2(safe.xMin / Screen.width, safe.yMin / Screen.height);
+            canvas.anchorMax = new Vector2(safe.xMax / Screen.width, safe.yMax / Screen.height);
+            canvas.offsetMin = canvas.offsetMax = Vector2.zero;
+        }
+
+        static Sprite RoundedSprite()
+        {
+            const int size = 32;
+            const float radius = 8f;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            texture.filterMode = FilterMode.Bilinear;
+            for (int y = 0; y < size; y++) for (int x = 0; x < size; x++)
+            {
+                float dx = Mathf.Max(8 - x, 0, x - 23);
+                float dy = Mathf.Max(8 - y, 0, y - 23);
+                float alpha = Mathf.Clamp01(radius - Mathf.Sqrt(dx * dx + dy * dy) + .5f);
+                texture.SetPixel(x, y, new Color(1, 1, 1, alpha));
+            }
+            texture.Apply();
+            return Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(.5f, .5f), 100,
+                0, SpriteMeshType.FullRect, new Vector4(10, 10, 10, 10));
         }
 
         Text Label(Transform parent, string value, int size, Vector2 position, Vector2 dimensions)

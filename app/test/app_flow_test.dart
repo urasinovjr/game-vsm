@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:game_vsm_app/app_controller.dart';
+import 'package:game_vsm_app/data/game_launcher.dart';
 import 'package:game_vsm_app/data/session_store.dart';
 import 'package:game_vsm_app/data/training_api.dart';
 import 'package:game_vsm_app/main.dart';
@@ -46,11 +48,28 @@ class FakeGateway implements TrainingGateway {
   Future<List<LeaderboardEntry>> leaderboard(String token) async => const [];
 }
 
+class FakeGameLauncher implements GameLauncher {
+  String? token;
+  String? profileId;
+  int calls = 0;
+
+  @override
+  Future<void> open({required String token, required String profileId}) async {
+    this.token = token;
+    this.profileId = profileId;
+    calls++;
+  }
+}
+
 void main() {
   test('новый профиль сохраняется, затем открывается программа', () async {
     final store = MemorySessionStore();
     final gateway = FakeGateway();
-    final controller = AppController(gateway: gateway, store: store);
+    final controller = AppController(
+      gateway: gateway,
+      store: store,
+      gameLauncher: FakeGameLauncher(),
+    );
     await controller.boot();
     expect(controller.page, AppPage.onboarding);
 
@@ -78,6 +97,7 @@ void main() {
     final controller = AppController(
       gateway: FakeGateway()..unauthorized = true,
       store: store,
+      gameLauncher: FakeGameLauncher(),
     );
     await controller.boot();
 
@@ -88,9 +108,11 @@ void main() {
   testWidgets('экран программы открывает первый день, остальные закрыты', (
     tester,
   ) async {
+    final launcher = FakeGameLauncher();
     final controller = AppController(
       gateway: FakeGateway(),
       store: MemorySessionStore(),
+      gameLauncher: launcher,
     );
     await controller.register(
       name: 'Учебный проводник',
@@ -101,6 +123,11 @@ void main() {
     await tester.pumpWidget(TrainingApp(controller: controller));
 
     expect(find.text('Программа обучения'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('start_game_home')));
+    await tester.pumpAndSettle();
+    expect(launcher.calls, 1);
+    expect(launcher.token, 'secret');
+    expect(launcher.profileId, '1');
     await tester.scrollUntilVisible(find.text('День 5'), 250);
     expect(find.text('День 5'), findsOneWidget);
     await tester.tap(find.text('День 5'));
@@ -110,12 +137,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Этапы маршрута'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Практический рейс скоро станет доступен.'),
+      find.byKey(const ValueKey('start_game_day')),
       250,
     );
-    expect(
-      find.text('Практический рейс скоро станет доступен.'),
-      findsOneWidget,
-    );
+    await tester.tap(find.byKey(const ValueKey('start_game_day')));
+    await tester.pumpAndSettle();
+    expect(launcher.calls, 2);
   });
 }

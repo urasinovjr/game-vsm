@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app_controller.dart';
+import 'data/game_launcher.dart';
 import 'data/session_store.dart';
 import 'data/training_api.dart';
 import 'ui/app_view.dart';
@@ -17,13 +18,9 @@ void main() {
     ),
   );
   final controller = AppController(
-    gateway: HttpTrainingGateway(
-      baseUrl: const String.fromEnvironment(
-        'API_BASE_URL',
-        defaultValue: 'http://10.0.2.2:8000',
-      ),
-    ),
+    gateway: LocalTrainingGateway(),
     store: SecureSessionStore(),
+    gameLauncher: AndroidGameLauncher(),
   );
   runApp(TrainingApp(controller: controller));
   controller.boot();

@@ -7,15 +7,41 @@ const panel = Color(0xFF102440);
 const blue = Color(0xFF087AFF);
 const muted = Color(0xFF91A9C6);
 
-class AppView extends StatelessWidget {
+class AppView extends StatefulWidget {
   const AppView({super.key, required this.controller});
 
   final AppController controller;
 
   @override
+  State<AppView> createState() => _AppViewState();
+}
+
+class _AppViewState extends State<AppView> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        widget.controller.identity != null) {
+      widget.controller.refreshProfile();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: controller,
+    listenable: widget.controller,
     builder: (context, _) {
+      final controller = widget.controller;
       final page = controller.page;
       if (page == null) return const SplashScreen();
       if (page == AppPage.onboarding) {
@@ -420,6 +446,14 @@ class HomeScreen extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 17),
+          PrimaryButton(
+            key: const ValueKey('start_game_home'),
+            label: controller.busy ? 'Открываем смену…' : 'Начать смену',
+            onPressed: controller.busy || profile == null
+                ? null
+                : controller.startGame,
+          ),
           const SizedBox(height: 27),
           const Text(
             'Программа обучения',
@@ -590,7 +624,13 @@ class DayScreen extends StatelessWidget {
           last: step.$1 == 4,
         ),
       const SizedBox(height: 25),
-      const _IntegrationNotice(),
+      PrimaryButton(
+        key: const ValueKey('start_game_day'),
+        label: controller.busy ? 'Открываем смену…' : 'Начать смену',
+        onPressed: controller.busy || controller.profile == null
+            ? null
+            : controller.startGame,
+      ),
     ],
   );
 }
@@ -672,30 +712,6 @@ class _TimelineStep extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _IntegrationNotice extends StatelessWidget {
-  const _IntegrationNotice();
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(15),
-    decoration: BoxDecoration(
-      color: panel,
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: const Row(
-      children: [
-        Icon(Icons.schedule_rounded, color: Color(0xFF78B5FF)),
-        SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            'Практический рейс скоро станет доступен.',
-            style: TextStyle(fontSize: 12),
           ),
         ),
       ],
@@ -827,8 +843,9 @@ class LeaderboardScreen extends StatelessWidget {
         if (controller.leaderboard.isEmpty && !controller.busy)
           const EmptyState(
             icon: Icons.leaderboard_outlined,
-            title: 'Пока нет результатов',
-            description: 'Завершённые смены участников появятся здесь.',
+            title: 'Общий рейтинг пока недоступен',
+            description:
+                'Личный результат сохраняется на устройстве. Общий рейтинг появится после синхронизации.',
           ),
         for (final item in controller.leaderboard.indexed)
           Padding(
